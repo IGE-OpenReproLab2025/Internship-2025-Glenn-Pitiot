@@ -205,27 +205,14 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
     
-def plot_interpolated_heatmap_PT100(df_PT100,Dic_PT100, date=tuple, resolution=0.01, vmin=None, vmax=None, cmap='jet', ax=None):
-    '''
-    Plot an interpolated heatmap of PT100 temperatures over time and height.
-
-    Parameters:
-    - df_PT100: DataFrame with 'TIMESTAMP' column and 'T(n)' columns for PT100 readings
-    - Dic_PT100: Dictionary {n: 'height in cm'}, mapping PT100 numbers to height
-    - date: Tuple of (start_date, end_date) as strings
-    - resolution: Vertical resolution for interpolation in meters (e.g., 0.01 for 1 cm)
-    - vmin: Minimum temperature for the color scale (optional)
-    - vmax: Maximum temperature for the color scale (optional)
-    - cmap: Colormap (default: 'jet')
-    - ax: Optional matplotlib axes object to plot on
-    '''
-
+def plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=tuple, resolution=0.01, vmin=None, vmax=None, cmap='jet', ax=None):
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
     from scipy.interpolate import interp1d
     import matplotlib.dates as mdates
-    
+    from matplotlib.colors import Normalize
+
     # Convert date strings to datetime
     start_date, end_date = pd.to_datetime(date[0]), pd.to_datetime(date[1])
 
@@ -237,13 +224,15 @@ def plot_interpolated_heatmap_PT100(df_PT100,Dic_PT100, date=tuple, resolution=0
     heights_cm = [float(Dic_PT100[pt].replace(' cm', '')) for pt in PT100_sorted]
     heights_m = np.array(heights_cm) / 100  # Convert to meters
 
-    # Prepare time and interpolated height axis
-    time = pd.to_datetime(df_filtered['TIMESTAMP']).values
+    # Prepare time axis in ordinal (matplotlib uses float days since 0001-01-01)
+    time_dt = pd.to_datetime(df_filtered['TIMESTAMP'])
+    time_ord = mdates.date2num(time_dt)
+
+    # Interpolated height axis
     height_interp = np.arange(min(heights_m), max(heights_m), resolution)
 
-    # Initialize interpolated temperature matrix
+    # Interpolation
     temp_interp_matrix = []
-
     for i in range(len(df_filtered)):
         temps = [df_filtered[f'T({pt})'].iloc[i] for pt in PT100_sorted]
         f_interp = interp1d(heights_m, temps, kind='linear', fill_value='extrapolate')
@@ -251,39 +240,39 @@ def plot_interpolated_heatmap_PT100(df_PT100,Dic_PT100, date=tuple, resolution=0
 
     temp_interp_matrix = np.array(temp_interp_matrix).T  # shape: (height, time)
 
-    # Create meshgrid
-    time_grid, height_grid = np.meshgrid(time, height_interp)
+    # Clip data between vmin and vmax if these sont définis
+    if vmin is not None and vmax is not None:
+        temp_interp_matrix = np.clip(temp_interp_matrix, vmin, vmax)
+        norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
+    else:
+        norm = None
+
+    # Create meshgrid for plotting
+    time_grid, height_grid = np.meshgrid(time_ord, height_interp)
 
     # Use provided axis or create new figure
     if ax is None:
         fig, ax = plt.subplots(figsize=(14, 6))
 
-    # Plotting
+    # Plotting with ordinal time axis
     contour = ax.contourf(
         time_grid,
         height_grid,
         temp_interp_matrix,
         levels=100,
         cmap=cmap,
-        vmin=vmin,
-        vmax=vmax
+        norm=norm  # utilisation de la normalisation clippee
     )
-    ax.set_xlim(time[0], time[-1])
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%m'))
 
-    # Colorbar (only if creating figure)
-    if ax is None:
-        cbar = plt.colorbar(contour, ax=ax)
-        cbar.set_label('Temperature [°C]')
-        cmap.set_over((0.32, 0.0, 0.097))
-        cbar.set_label('Temperature [°C]')
-        ax.set_title('Interpolated Temperature Profile Over Time and Height')
-    else:
-        cbar = plt.colorbar(contour, ax=ax)
+    ax.set_xlim(time_ord[0], time_ord[-1])
+    ax.xaxis_date()  # interpret x-axis ticks as dates
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))  # format tick labels
 
-    #plt.tight_layout()
+    # Colorbar
+    cbar = plt.colorbar(contour, ax=ax)
+    cbar.set_label('Temperature [°C]')
 
-    return ax  # return ax in case further customization is needed
+    return ax,contour
 
 def plot_density_profile(df_density, thickness):
     """
