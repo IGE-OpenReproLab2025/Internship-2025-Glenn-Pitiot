@@ -205,7 +205,60 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
     
-def plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=tuple, resolution=0.01, vmin=None, vmax=None, cmap='jet', ax=None):
+def plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=tuple, resolution=0.01, vmin=None, vmax=None, cmap='jet', ax=None, cbar=True):
+    """
+    Plot an interpolated heatmap of temperature profiles from PT100 sensors over time.
+
+    Parameters
+    ----------
+    df_PT100 : pandas.DataFrame
+        DataFrame containing temperature measurements from PT100 sensors. 
+        Must include a 'TIMESTAMP' column and columns named as 'T(sensor_name)' 
+        corresponding to the keys in `Dic_PT100`.
+
+    Dic_PT100 : dict
+        Dictionary mapping each PT100 sensor name (e.g., 'PT1') to its physical height 
+        as a string in centimeters (e.g., '10 cm').
+
+    date : tuple of str or pandas.Timestamp
+        A tuple specifying the start and end date for the plot (e.g., ('2025-03-01', '2025-03-17')).
+
+    resolution : float, optional (default=0.01)
+        Vertical resolution of the interpolation in meters.
+
+    vmin : float, optional
+        Minimum temperature value for color normalization (used for clipping the colormap).
+
+    vmax : float, optional
+        Maximum temperature value for color normalization (used for clipping the colormap).
+
+    cmap : str, optional (default='jet')
+        Colormap used for the heatmap.
+
+    ax : matplotlib.axes.Axes, optional
+        Existing matplotlib Axes object to plot on. If None, a new figure and axes are created.
+
+    cbar : bool, optional (default=True)
+        Whether to display the colorbar.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The axes object containing the plot.
+
+    contour : QuadContourSet
+        The contour set created by `ax.contourf`, useful for further customization.
+
+    Notes
+    -----
+    - Temperatures are interpolated linearly along the vertical axis using `scipy.interpolate.interp1d`.
+    - Time is converted to matplotlib's internal ordinal format for plotting.
+    - The function clips temperature values to [vmin, vmax] if both are provided.
+
+    Example
+    -------
+    >>> ax, contour = plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=('2025-03-01', '2025-03-17'))
+    """
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -213,25 +266,25 @@ def plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=tuple, resolution=
     import matplotlib.dates as mdates
     from matplotlib.colors import Normalize
 
-    # Convert date strings to datetime
+    # Convert date strings to datetime objects
     start_date, end_date = pd.to_datetime(date[0]), pd.to_datetime(date[1])
 
-    # Filter dataframe by date
+    # Filter the DataFrame by the selected date range
     df_filtered = df_PT100[(df_PT100['TIMESTAMP'] >= start_date) & (df_PT100['TIMESTAMP'] <= end_date)].copy()
 
-    # Sort PT100s by physical height
+    # Sort PT100 sensors by their physical height
     PT100_sorted = sorted(Dic_PT100.keys(), key=lambda x: float(Dic_PT100[x].replace(' cm','')))
     heights_cm = [float(Dic_PT100[pt].replace(' cm', '')) for pt in PT100_sorted]
-    heights_m = np.array(heights_cm) / 100  # Convert to meters
+    heights_m = np.array(heights_cm) / 100  # Convert from centimeters to meters
 
-    # Prepare time axis in ordinal (matplotlib uses float days since 0001-01-01)
+    # Prepare the time axis in ordinal format (matplotlib uses float days since 0001-01-01)
     time_dt = pd.to_datetime(df_filtered['TIMESTAMP'])
     time_ord = mdates.date2num(time_dt)
 
-    # Interpolated height axis
+    # Create the interpolated vertical axis
     height_interp = np.arange(min(heights_m), max(heights_m), resolution)
 
-    # Interpolation
+    # Perform vertical interpolation for each timestamp
     temp_interp_matrix = []
     for i in range(len(df_filtered)):
         temps = [df_filtered[f'T({pt})'].iloc[i] for pt in PT100_sorted]
@@ -240,39 +293,40 @@ def plot_interpolated_heatmap_PT100(df_PT100, Dic_PT100, date=tuple, resolution=
 
     temp_interp_matrix = np.array(temp_interp_matrix).T  # shape: (height, time)
 
-    # Clip data between vmin and vmax if these sont définis
+    # Clip data between vmin and vmax if both are defined
     if vmin is not None and vmax is not None:
         temp_interp_matrix = np.clip(temp_interp_matrix, vmin, vmax)
         norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
     else:
         norm = None
 
-    # Create meshgrid for plotting
+    # Create meshgrid for plotting (time x height)
     time_grid, height_grid = np.meshgrid(time_ord, height_interp)
 
-    # Use provided axis or create new figure
+    # Use the provided axis or create a new one
     if ax is None:
         fig, ax = plt.subplots(figsize=(14, 6))
 
-    # Plotting with ordinal time axis
+    # Plot filled contours using interpolated temperature data
     contour = ax.contourf(
         time_grid,
         height_grid,
         temp_interp_matrix,
         levels=100,
         cmap=cmap,
-        norm=norm  # utilisation de la normalisation clippee
+        norm=norm  # Use clipped normalization if provided
     )
 
     ax.set_xlim(time_ord[0], time_ord[-1])
-    ax.xaxis_date()  # interpret x-axis ticks as dates
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))  # format tick labels
+    ax.xaxis_date()  # Interpret x-axis as dates
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))  # Format tick labels as 'day-month'
 
-    # Colorbar
-    cbar = plt.colorbar(contour, ax=ax)
-    cbar.set_label('Temperature [°C]')
+    # Add colorbar if requested
+    if cbar:
+        cbar = plt.colorbar(contour, ax=ax)
+        cbar.set_label('Temperature [°C]')
 
-    return ax,contour
+    return ax, contour
 
 def plot_density_profile(df_density, thickness):
     """
@@ -299,4 +353,192 @@ def plot_LWC(df_LWC_profile,thickness):
     plt.ylabel('z [m]')
     plt.title("LWC profile")
     plt.legend()
-    plt.grid()
+    plt.grid
+
+def select_date(date, time):
+    """
+    Selects a boolean mask for elements in 'time' that fall between the provided start and end dates.
+
+    Parameters:
+    - date: tuple or list of two date strings or datetime objects (start, end)
+    - time: array-like of datetime values (e.g., pd.Series, list, np.array)
+
+    Returns:
+    - List of booleans (mask): True if time[i] is within the date interval
+    """
+    start, end = pd.to_datetime(date[0]), pd.to_datetime(date[1])
+    mask = [(start < t < end) for t in pd.to_datetime(time)]
+    return mask
+
+from snowtools.plots.stratiprofile.profilPlot import saisonProfil
+
+def plot_obs_vs_BKT_RCH(dz_BKT,temp_BKT,time_BKT,
+                        dz_RCH,temp_RCH,time_RCH,
+                        df_PT100,Dic_PT100,
+                        date,
+                        vmin,vmax):
+    """
+    Plot temperature profiles from BKT and RCH sensors alongside interpolated PT100 observations.
+
+    This function creates a figure with three vertically stacked subplots sharing the y-axis (snow height).
+    The first two subplots display temperature profiles from BKT and RCH datasets respectively,
+    while the third shows a heatmap of interpolated PT100 temperature measurements over time and height.
+
+    Parameters
+    ----------
+    dz_BKT : array-like
+        Snow height values for BKT measurements (in meters).
+    temp_BKT : array-like
+        Temperature values for BKT measurements (in Kelvin).
+    time_BKT : array-like of datetime-like
+        Timestamps corresponding to BKT measurements.
+
+    dz_RCH : array-like
+        Snow height values for RCH measurements (in meters).
+    temp_RCH : array-like
+        Temperature values for RCH measurements (in Kelvin).
+    time_RCH : array-like of datetime-like
+        Timestamps corresponding to RCH measurements.
+
+    df_PT100 : pandas.DataFrame
+        DataFrame containing PT100 temperature observations, including a 'TIMESTAMP' column.
+    Dic_PT100 : dict
+        Dictionary mapping PT100 sensor names to their heights (strings with units, e.g. '50 cm').
+
+    date : tuple of str or datetime-like
+        Start and end dates to filter the data for plotting (e.g. ('2025-03-01', '2025-03-31')).
+
+    vmin : float
+        Minimum temperature value for color scaling.
+    vmax : float
+        Maximum temperature value for color scaling.
+
+    Returns
+    -------
+    matplotlib.figure.Figure, numpy.ndarray, matplotlib.contour.QuadContourSet
+        The matplotlib Figure object, array of Axes objects, and the contour set of the PT100 heatmap.
+    """
+    # Appliquer les masques
+    masque_BKT = select_date(date, time_BKT)
+    masque_RCH = select_date(date, time_RCH)
+    
+    fig, ax = plt.subplots(3, 1, figsize=(2*3.54, 1.5*3.54), sharey=True,constrained_layout=True)
+    
+    saisonProfil(
+                ax[0],
+                dz_BKT[masque_BKT],
+                temp_BKT[masque_BKT] - 273.16,
+                time_BKT[masque_BKT],
+                colormap="Blues",
+                value_min=vmin,
+                value_max=vmax,
+                legend="Temperature [$°C$]",
+                cbar_show=False
+    )
+    
+    #ax[0].xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=3))
+    
+    print(ax[0].get_xticks())
+    saisonProfil(
+                ax[1],
+                dz_RCH[masque_RCH],
+                temp_RCH[masque_RCH] - 273.16,
+                time_RCH[masque_RCH],
+                colormap="Blues",
+                value_min=vmin,
+                value_max=vmax,
+                legend="Temperature [$°C$]",
+                ylimit=1.42,
+                cbar_show=False
+    )
+    
+    ax[2],contour = plot_interpolated_heatmap_PT100(
+                                                    df_PT100=df_PT100,
+                                                    Dic_PT100=Dic_PT100,
+                                                    date=('2025-03-17 15:00','2025-03-29 15:00'),
+                                                    resolution=0.01,
+                                                    vmin=vmin,
+                                                    vmax=vmax,
+                                                    cmap="Blues",
+                                                    ax=ax[2],
+                                                    cbar=False
+    )
+    for a in ax:
+        a.set_ylabel("Snow Height [$m$]")
+    
+    ax[2].set_xlabel("Date")
+    
+    ax[0].plot([], [], label='(BKT)')
+    ax[1].plot([], [], label='(RCH)')
+    ax[2].plot([], [], label='(OBS)')
+    
+    # Appeler legend sans titre
+    ax[0].legend(loc='upper right')
+    ax[1].legend(loc='upper right')
+    ax[2].legend(loc='upper right')
+    cbar = fig.colorbar(contour, ax=ax, orientation='vertical', fraction=0.05, pad=0.04)
+    cbar.set_label('Temperature [°C]')
+
+import matplotlib.dates as mdates
+
+def plot_BKTvsRCH(dz_BKT,density_BKT,snowliq_BKT,time_BKT,
+                  dz_RCH,density_RCH,snowliq_RCH,time_RCH,
+                  ):
+    """
+    Plot density and liquid water content (LWC) profiles from BKT and RCH sensors
+    in a 2x2 grid of subplots for comparison.
+
+    Uses the `saisonProfil` plotting function from snowtools to visualize profiles
+    over time and snow height with appropriate color maps.
+
+    Parameters
+    ----------
+    dz_BKT : array-like
+        Snow height values for BKT measurements (in meters).
+    density_BKT : array-like
+        Density values for BKT measurements (in kg/m³).
+    time_BKT : array-like of datetime-like
+        Timestamps corresponding to BKT measurements.
+
+    dz_RCH : array-like
+        Snow height values for RCH measurements (in meters).
+    density_RCH : array-like
+        Density values for RCH measurements (in kg/m³).
+    time_RCH : array-like of datetime-like
+        Timestamps corresponding to RCH measurements.
+
+    Returns
+    -------
+    None
+        Displays the plots but does not return any object.
+    """
+    from snowtools.plots.stratiprofile.profilPlot import saisonProfil
+    
+    #ax = plt.gca()
+    fig, ax = plt.subplots(2,2,figsize=(2.5*3.54,1.2*3.54), sharey=True, sharex=True)
+    
+    
+    rect1 = saisonProfil(ax[0,0], dz_BKT, density_BKT, time_BKT, colormap='Purples',legend="Density [$kg/m^3$]")
+    cbar = saisonProfil(ax[1,0], dz_RCH, density_RCH, time_RCH, colormap='Purples',legend="Density [$kg/m^3$]")
+    
+    rect1 = saisonProfil(ax[0,1], dz_BKT, snowliq_BKT, time_BKT, colormap='Blues',legend="LWC [$kg/m^3$]")
+    cbar = saisonProfil(ax[1,1], dz_RCH, snowliq_RCH, time_RCH, colormap='Blues',legend="LWC [$kg/m^3$]")
+    
+    ax[0,0].set_ylabel("Snow Height [$m$]")
+    ax[1,0].set_ylabel("Snow Height [$m$]")
+    
+    
+    # Date formating
+    date_format = mdates.DateFormatter('%d-%b')
+    
+    ax[0,0].plot([], [], label=' ')  # a space as label
+    ax[1,0].plot([], [], label=' ')
+    ax[0,1].plot([], [], label=' ')
+    ax[1,1].plot([], [], label=' ')
+    
+    ax[0,0].legend(title='(BKT)', loc='upper right')
+    ax[1,0].legend(title='(RCH)', loc='upper right')
+    ax[0,1].legend(title='(BKT)', loc='upper right')
+    ax[1,1].legend(title='(RCH)', loc='upper right')
+    
+    plt.show()
