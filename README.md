@@ -1,5 +1,6 @@
 # Internship : Évolution de la neige en période de fonte : modélisation et observation au Col du Lautaret
 **Abstract**
+
 The ongoing development of snow models requires the study of wet and melting
 snowpacks. Identifying the key mechanisms at play for water percolation within a natural
 snowpack is thus critical to model this complex process. To that end, I participated in
@@ -24,6 +25,7 @@ measurements able to continuously measure liquid water content in snow, and tail
 numerical schemes to capture the dominant mechanisms at play during percolation.
 
 **Scientific context:**
+
 Snow is a key component of the global climate system. It continuously covers glaciers
 and ice sheets, and seasonally covers nearly one-third of the Earth’s land surface (Sturm
 et Liston, 2021). Snow regulates surface energy exchanges with its high albedo and low
@@ -65,6 +67,7 @@ represent water content, pathways, and infiltration depth (Wever et al., 2015).
 
 
 **Objectives and research questions**
+
 This internship aims to evaluate different representations of water percolation in snow
 using field observations from an alpine site. The work is structured around two main
 objectives: (1) building a dataset for evaluating percolation schemes, and (2) applying this dataset to the Crocus model. By comparing simulations with field data, the study
