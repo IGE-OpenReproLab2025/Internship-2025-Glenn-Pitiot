@@ -1,6 +1,6 @@
 # Internship : Évolution de la neige en période de fonte : modélisation et observation au Col du Lautaret
 **Abstract**
-
+<p align="justify">
 The ongoing development of snow models requires the study of wet and melting
 snowpacks. Identifying the key mechanisms at play for water percolation within a natural
 snowpack is thus critical to model this complex process. To that end, I participated in
@@ -23,7 +23,8 @@ is percolation along preferential paths, leading to a poor representation of the
 profiles in Crocus for both schemes. Further development are thus two folds : developing
 measurements able to continuously measure liquid water content in snow, and tailoring
 numerical schemes to capture the dominant mechanisms at play during percolation.
-
+<p>
+    
 **Scientific context:**
 
 Snow is a key component of the global climate system. It continuously covers glaciers
@@ -91,7 +92,7 @@ This repository is organized into the following categories:
 - **Report:** Contains the final report delivered at the end of the internship.  
 - **Notebooks:** Includes all materials related to methods and results.  
 - **Scripts and Utils:** Contains all the code required to run the notebooks.
-- **Data:** Can be provided.
+- **Data:** All data used in this work were first observed during the 2024–2025 snow season at Col du Lautaret. Meteorological data were collected by FluxAlps (https://www.osug.fr/le-labex/actions-soutenues/recherche/Ecologie/fluxalp-equipement-d-un-site-alpin-pour-la-mesure-des-flux-d-energie-et-de.html). Finally, outputs from Crocus simulations were also used.
 
 ## Licence
 
