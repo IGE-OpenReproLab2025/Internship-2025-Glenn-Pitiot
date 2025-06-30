@@ -76,6 +76,4 @@ This repository is organized into the following categories:
 - **Scripts and Utils:** Contains all the code required to run the notebooks.
 - **Data:** All data used in this work were first observed during the 2024–2025 snow season at Col du Lautaret. Meteorological data were collected by FluxAlps (https://www.osug.fr/le-labex/actions-soutenues/recherche/Ecologie/fluxalp-equipement-d-un-site-alpin-pour-la-mesure-des-flux-d-energie-et-de.html). Finally, outputs from Crocus simulations were also used.
 <p>
-    
-## Licence
 
